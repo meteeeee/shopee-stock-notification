@@ -1,0 +1,11 @@
+node_modules/
+data/
+.env
+*.log
+*.png
+*.html
+captured-api.json
+dump-headers.js
+check-scripts.js
+scratch-*.js
+
