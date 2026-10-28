@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: shopee-stock-notification
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
+      - key: DISCORD_USER_ID
+        sync: false
+      - key: SHOPEE_COOKIE
+        sync: false
+      - key: CHECK_INTERVAL_SECONDS
+        value: 60

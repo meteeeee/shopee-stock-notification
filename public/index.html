@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopee Stock Tracker & Discord Alert</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">Shopee Stock Monitor</h1>
+          <p class="brand-subtitle">Automated Restock Discord Notifications</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <div id="memory-meter-container" class="memory-meter" title="Render Free Tier Memory Usage (512 MB Limit)">
+          <div class="memory-label-row">
+            <span class="memory-title">RAM: <strong id="memory-usage-text">-- MB</strong> / 512M</span>
+            <span id="memory-percent-badge" class="badge badge-success">0%</span>
+          </div>
+          <div class="memory-bar-track">
+            <div id="memory-bar-fill" class="memory-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div id="tracker-status-badge" class="status-badge paused">
+          <span class="status-dot"></span>
+          <span class="status-text">Tracker Paused</span>
+        </div>
+        <button id="btn-toggle-tracker" class="btn btn-primary">Start Monitoring</button>
+        <button id="btn-check-now" class="btn btn-secondary">
+          <svg class="spin-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Check Now
+        </button>
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+      <!-- Left Column: Product Status & Restock Details -->
+      <section class="card product-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="tag tag-orange">Target Listing</span>
+            <h2 id="product-name" class="product-title">Loading Product Information...</h2>
+          </div>
+          <a id="product-link" href="https://id.shp.ee/M7J73Lp5" target="_blank" class="btn-icon-link" title="Open in Shopee">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </a>
+        </div>
+
+        <div class="product-body">
+          <div class="stock-highlight">
+            <div class="stock-number-container">
+              <span class="stock-label">Total Units Available</span>
+              <div id="stock-count" class="stock-count zero">0</div>
+              <span id="stock-status-pill" class="stock-pill pill-out">Out of Stock</span>
+            </div>
+            <div class="stock-meta-info">
+              <div class="meta-item">
+                <span class="meta-label">Estimated Price</span>
+                <span id="product-price" class="meta-value">--</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Last Checked</span>
+                <span id="last-checked-time" class="meta-value">Never</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Next Check</span>
+                <span id="next-check-time" class="meta-value" style="color: #38bdf8;">--</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Restock Events</span>
+                <span id="restock-counter" class="meta-value badge-count">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Variations & Model Breakdown -->
+          <div class="variations-section">
+            <div class="section-title-row">
+              <h3>Variation Stock Breakdown</h3>
+              <span id="variation-count-badge" class="badge">0 models</span>
+            </div>
+            <p class="section-hint">Stock is tracked per individual size/color model. A notification triggers if ANY model increases by +1 or more.</p>
+            <div id="variations-container" class="variations-grid">
+              <div class="empty-state">No variation data loaded yet. Run a check to populate.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Authentication & Discord Configuration -->
+      <div class="config-column">
+        <!-- Shopee Session Card -->
+        <section class="card auth-card">
+          <div class="card-header">
+            <h3>Shopee Authentication</h3>
+            <span id="auth-status-badge" class="badge badge-warning">Not Authenticated</span>
+          </div>
+          <p class="card-desc">Shopee blocks guest requests. Log in once to save your session cookies so the background tracker can fetch stock & prices in milliseconds.</p>
+          
+          <div class="auth-actions">
+            <button id="btn-launch-login" class="btn btn-primary full-width">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10 17 15 12 10 7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+              </svg>
+              Open Chrome to Log In (1-Click)
+            </button>
+            <button id="btn-toggle-manual-cookie" class="btn btn-outline full-width">Or Paste Cookie String Manually</button>
+          </div>
+
+          <div id="manual-cookie-box" class="manual-cookie-box hidden">
+            <label for="input-cookie-string">Shopee Cookie Header (from DevTools):</label>
+            <textarea id="input-cookie-string" rows="3" placeholder="SPC_EC=...; SPC_ST=..."></textarea>
+            <small style="display:block; margin-bottom: 8px; color: #94a3b8;">Tip: On Render Free Tier, also paste this into Render &rarr; Environment &rarr; <span class="code">SHOPEE_COOKIE</span> so restarts never wipe your login.</small>
+            <button id="btn-save-manual-cookie" class="btn btn-secondary btn-sm">Save Cookie</button>
+          </div>
+        </section>
+
+        <!-- Discord Webhook Settings -->
+        <section class="card discord-card">
+          <div class="card-header">
+            <h3>Discord Notification</h3>
+            <span class="tag tag-discord">Discord Webhook</span>
+          </div>
+          <form id="form-discord-config" class="config-form">
+            <div class="form-group">
+              <label for="discord-webhook-url">Discord Webhook URL:</label>
+              <input type="url" id="discord-webhook-url" placeholder="https://discord.com/api/webhooks/..." required>
+              <small>Create in Discord: Channel Settings &gt; Integrations &gt; Webhooks</small>
+            </div>
+
+            <div class="form-group">
+              <label for="discord-user-id">Discord User ID to Ping (Optional):</label>
+              <input type="text" id="discord-user-id" placeholder="e.g. 123456789012345678">
+              <small>Pings user directly with <span class="code">&lt;@ID&gt;</span> so their phone rings on restock!</small>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="check-interval">Check Interval (Seconds):</label>
+                <input type="number" id="check-interval" min="25" max="3600" value="60">
+              </div>
+              <div class="form-group flex-1">
+                <label for="target-product-url">Shopee URL:</label>
+                <input type="text" id="target-product-url" value="https://shopee.co.id/product/580295413/26906593873">
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save Settings</button>
+              <button type="button" id="btn-test-discord" class="btn btn-secondary">
+                🔔 Test Alert
+              </button>
+            </div>
+          </form>
+          <div id="discord-test-result" class="alert-box hidden"></div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Bottom Panels: Restock History & Console Logs -->
+    <div class="bottom-grid">
+      <!-- Restock Timeline -->
+      <section class="card history-card">
+        <div class="card-header">
+          <h3>Restock History Log</h3>
+          <span class="badge">Events: <span id="history-count">0</span></span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Stock Jump</th>
+                <th>Units Restocked</th>
+                <th>Variations Restocked</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <tr>
+                <td colspan="4" class="empty-cell">No restock events recorded yet. Monitoring in progress.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Live Terminal Console -->
+      <section class="card console-card">
+        <div class="card-header">
+          <h3>Live Activity Logs</h3>
+          <span class="status-dot green"></span>
+        </div>
+        <div id="logs-container" class="terminal-body">
+          <div class="terminal-line info">[System] Shopee Stock Tracker initialized.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
